@@ -3,6 +3,24 @@ from __future__ import annotations
 import shlex
 from pathlib import Path
 
+
+def docker_host_gcs_out(gcs_out: str) -> str:
+    """Return the GCS UDP endpoint that is reachable from inside Docker.
+
+    In Docker, 127.0.0.1 points to the container itself, not to the host
+    where QGroundControl is listening. Use Docker's host gateway name instead.
+    """
+    value = gcs_out.strip()
+    if not value:
+        return value
+    if value in {"udp:127.0.0.1:14550", "udpout:127.0.0.1:14550"}:
+        return "udp:host.docker.internal:14550"
+    if value.startswith("udp:localhost:") or value.startswith("udpout:localhost:"):
+        return value.replace("localhost", "host.docker.internal", 1).replace("udpout:", "udp:", 1)
+    if value.startswith("udp:127.0.0.1:") or value.startswith("udpout:127.0.0.1:"):
+        return value.replace("127.0.0.1", "host.docker.internal", 1).replace("udpout:", "udp:", 1)
+    return value
+
 from PyQt5.QtCore import QObject, QProcess, pyqtSignal
 
 from .config import LauncherProfile
@@ -126,8 +144,9 @@ def build_docker_sitl_command(
         sim_args.append("--console")
     if mavproxy_map:
         sim_args.append("--map")
-    if gcs_out.strip():
-        sim_args.append(f"--out={gcs_out.strip()}")
+    docker_gcs_out = docker_host_gcs_out(gcs_out)
+    if docker_gcs_out:
+        sim_args.append(f"--out={docker_gcs_out}")
     if wipe_params:
         sim_args.append("-w")
     if param_file.exists():
@@ -144,6 +163,8 @@ def build_docker_sitl_command(
         "--rm",
         "--name",
         DOCKER_CONTAINER,
+        "--add-host",
+        "host.docker.internal:host-gateway",
         "--network",
         "host",
         "-e",
