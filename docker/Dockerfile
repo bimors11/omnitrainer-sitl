@@ -1,6 +1,8 @@
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+ENV DEBIAN_FRONTEND=noninteractive
 ENV ARDUPILOT_ROOT=/opt/ardupilot
 ENV OMNI_WORKSPACE=/workspace/omnitrainer-sitl
 
