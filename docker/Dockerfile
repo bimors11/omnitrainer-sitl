@@ -22,7 +22,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN git clone --recurse-submodules https://github.com/ArduPilot/ardupilot.git "${ARDUPILOT_ROOT}"
 
-RUN "${ARDUPILOT_ROOT}/Tools/environment_install/install-prereqs-ubuntu.sh" -y || true
+RUN useradd -m -s /bin/bash ardupilot \
+ && chown -R ardupilot:ardupilot "${ARDUPILOT_ROOT}" \
+ && echo "ardupilot ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ardupilot \
+ && chmod 0440 /etc/sudoers.d/ardupilot \
+ && su - ardupilot -c "cd ${ARDUPILOT_ROOT} && ./Tools/environment_install/install-prereqs-ubuntu.sh -y"
 
 RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel \
     && python3 -m pip install --no-cache-dir PyYAML pymavlink MAVProxy
