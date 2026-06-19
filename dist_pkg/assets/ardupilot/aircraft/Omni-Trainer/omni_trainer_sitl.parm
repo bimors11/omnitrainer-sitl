@@ -1,0 +1,55 @@
+# Omni-Trainer DLE30 JSBSim SITL helper params
+#
+# This file is intentionally simulation-safe. The JSBSim aircraft model
+# provides propulsion physics; the EFI script provides display/log telemetry.
+# Do not enable ArduPilot ICE throttle gating here, because it can suppress
+# throttle in TAKEOFF mode while waiting for engine/RPM state.
+
+# EFI / ICE simulation
+EFI_TYPE 9
+RPM1_TYPE 3
+LOG_DISARMED 1
+ICE_ENABLE 0
+THR_MIN 0
+THR_MAX 100
+THR_SLEWRATE 100
+TRIM_THROTTLE 50
+
+# JSBSim fixed-wing airspeed / TECS baseline
+ARSPD_USE 1
+ARSPD_TYPE 100
+ARSPD_AUTOCAL 0
+AIRSPEED_MIN 17
+AIRSPEED_CRUISE 22
+AIRSPEED_MAX 27
+TRIM_ARSPD_CM 2200
+TECS_PITCH_MAX 20
+PTCH_LIM_MAX_DEG 25
+PTCH_LIM_MIN_DEG -20
+
+# Runway-style SITL takeoff. TAKEOFF mode starts throttle-suppressed in
+# ArduPlane; these values remove hand-launch/catapult gates so an armed
+# simulator in TAKEOFF mode can roll and rotate immediately.
+TKOFF_ALT 50
+TKOFF_DIST 200
+TKOFF_GND_PITCH 5
+TKOFF_LVL_ALT 15
+TKOFF_LVL_PITCH 5
+TKOFF_PLIM_SEC 2
+TKOFF_ROTATE_SPD 17
+TKOFF_THR_DELAY 0
+TKOFF_THR_MAX 100
+TKOFF_THR_MAX_T 4
+TKOFF_THR_MIN 0
+TKOFF_THR_MINACC 0
+TKOFF_THR_MINSPD 0
+TKOFF_THR_SLEW 100
+TKOFF_TIMEOUT 0
+
+# MAVLink rangefinder fed by scripts/omni_rangefinder_mavlink_sim.py
+RNGFND1_TYPE 10
+RNGFND1_ORIENT 25
+RNGFND1_MIN_CM 30
+RNGFND1_MAX_CM 4500
+RNGFND1_SCALING 1
+RNGFND_LANDING 1
