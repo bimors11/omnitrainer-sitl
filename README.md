@@ -73,6 +73,33 @@ You can also pass a profile path:
 python3 launcher.py profiles/omni_trainer_dle30_15kg.yaml
 ```
 
+## Docker SITL
+
+Docker mode runs ArduPilot SITL inside a container while keeping the launcher GUI and QGroundControl native on the host.
+
+On a fresh device:
+
+```bash
+bash scripts/setup_ubuntu.sh
+./launch.sh
+```
+
+In the GUI, enable **Docker SITL** before pressing **Start SITL** or **Start All**. The first run builds the local image `omnitrainer-sitl:local`, so it can take several minutes. Later runs reuse the image.
+
+Headless Docker SITL is also available:
+
+```bash
+bash scripts/docker_sitl.sh
+```
+
+Or with Compose:
+
+```bash
+docker compose up --build sitl
+```
+
+Docker SITL uses host networking so QGroundControl can keep listening on UDP `14550`.
+
 ## Map Workflow
 
 The map opens at the configured start location. Click the map or drag the marker to update latitude and longitude in the Start Location panel. Use **Fetch Terrain Altitude** to query terrain elevation and apply the configured altitude offset. Manual altitude entry remains available if the lookup fails.

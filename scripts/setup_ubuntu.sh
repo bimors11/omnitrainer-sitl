@@ -26,8 +26,11 @@ fi
   python3-pyqt5 \
   python3-pyqt5.qtwebengine \
   python3-pyqt5.qtwebchannel \
+  docker.io \
   rsync \
   xterm
+
+"${APT[@]}" install -y docker-compose-plugin || true
 
 python3 -m pip install --user -r "${PROJECT_ROOT}/requirements.txt"
 
@@ -81,6 +84,10 @@ echo
 echo "System and Python dependencies installed."
 echo "Default ArduPilot root: ${ARDUPILOT_ROOT}"
 echo "The profile auto-detects OMNI_ARDUPILOT_ROOT, then \$HOME/ardupilot, then legacy checkout paths."
+if command -v docker >/dev/null 2>&1; then
+  echo "Docker runtime is available. If Docker says permission denied, run: sudo usermod -aG docker \$USER"
+  echo "Then log out and log back in before using Docker SITL."
+fi
 
 if [ "${missing}" -ne 0 ]; then
   echo

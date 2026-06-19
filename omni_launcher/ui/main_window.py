@@ -34,9 +34,9 @@ from ..efi_process import build_efi_command
 from ..location_writer import write_location
 from ..process_utils import is_tcp_port_open, parse_tcp_endpoint
 from ..rangefinder_process import build_rangefinder_command
-from ..sitl_process import ProcessRunner, build_sitl_command
+from ..sitl_process import ProcessRunner, build_docker_sitl_command, build_sitl_command
 from ..terrain import fetch_terrain_altitude_m
-from ..validation import validate_setup
+from ..validation import validate_docker_setup, validate_setup
 from .map_widget import MapWidget
 
 
@@ -241,6 +241,8 @@ class MainWindow(QMainWindow):
         self.console_enabled = QCheckBox("Console")
         self.mavproxy_map_enabled = QCheckBox("MAVProxy map")
         self.wipe_params_enabled = QCheckBox("Reset params")
+        self.docker_sitl_enabled = QCheckBox("Docker SITL")
+        self.docker_sitl_enabled.toggled.connect(self.on_docker_sitl_toggled)
         self.gcs_out = QLineEdit()
         sitl_grid.addWidget(QLabel("ArduPilot root"), 0, 0)
         sitl_grid.addWidget(self.ardupilot_root, 0, 1)
@@ -248,8 +250,9 @@ class MainWindow(QMainWindow):
         sitl_grid.addWidget(self.console_enabled, 1, 0)
         sitl_grid.addWidget(self.mavproxy_map_enabled, 1, 1)
         sitl_grid.addWidget(self.wipe_params_enabled, 1, 2)
-        sitl_grid.addWidget(QLabel("GCS out"), 2, 0)
-        sitl_grid.addWidget(self.gcs_out, 2, 1, 1, 2)
+        sitl_grid.addWidget(self.docker_sitl_enabled, 2, 0)
+        sitl_grid.addWidget(QLabel("GCS out"), 3, 0)
+        sitl_grid.addWidget(self.gcs_out, 3, 1, 1, 2)
         layout.addWidget(sitl_box)
 
         efi_box = QGroupBox("EFI Options")
@@ -362,6 +365,7 @@ class MainWindow(QMainWindow):
         self.console_enabled.setChecked(True)
         self.mavproxy_map_enabled.setChecked(True)
         self.wipe_params_enabled.setChecked(False)
+        self.docker_sitl_enabled.setChecked(False)
         self.gcs_out.setText(p.network.gcs_out)
         self.efi_enabled.setChecked(p.engine.efi_enabled)
         self.efi_connect.setText(p.network.efi_connect)
@@ -416,9 +420,16 @@ class MainWindow(QMainWindow):
         if path:
             self.ardupilot_root.setText(path)
 
+    def on_docker_sitl_toggled(self, enabled: bool) -> None:
+        if enabled:
+            self.mavproxy_map_enabled.setChecked(False)
+
     def validate_setup_clicked(self) -> bool:
         self.update_profile_from_ui()
-        result = validate_setup(self.profile, self.efi_enabled.isChecked())
+        if self.docker_sitl_enabled.isChecked():
+            result = validate_docker_setup(self.profile, self.efi_enabled.isChecked())
+        else:
+            result = validate_setup(self.profile, self.efi_enabled.isChecked())
         self.log("[VALIDATION]\n" + result.summary())
         if result.ok:
             QMessageBox.information(self, "Validation passed", result.summary())
@@ -520,33 +531,55 @@ class MainWindow(QMainWindow):
 
     def start_sitl(self, start_support_after_ready: bool) -> None:
         self.update_profile_from_ui()
-        result = validate_setup(self.profile, self.efi_enabled.isChecked() and start_support_after_ready)
+        docker_mode = self.docker_sitl_enabled.isChecked()
+        if docker_mode:
+            result = validate_docker_setup(self.profile, self.efi_enabled.isChecked() and start_support_after_ready)
+        else:
+            result = validate_setup(self.profile, self.efi_enabled.isChecked() and start_support_after_ready)
         if not result.ok:
             self.log("[VALIDATION]\n" + result.summary())
             QMessageBox.warning(self, "Cannot start SITL", result.summary())
             return
-        try:
-            line = write_location(
-                self.profile.paths.ardupilot_root,
-                self.profile.start_location.name,
-                self.lat.value(),
-                self.lng.value(),
-                self.alt_msl.value(),
-                self.heading.value(),
+        if docker_mode:
+            line = (
+                f"{self.profile.start_location.name}={self.lat.value():.7f},"
+                f"{self.lng.value():.7f},{self.alt_msl.value():.2f},{self.heading.value():.1f}"
             )
-        except Exception as exc:
-            QMessageBox.critical(self, "Cannot write start location", str(exc))
-            return
+        else:
+            try:
+                line = write_location(
+                    self.profile.paths.ardupilot_root,
+                    self.profile.start_location.name,
+                    self.lat.value(),
+                    self.lng.value(),
+                    self.alt_msl.value(),
+                    self.heading.value(),
+                )
+            except Exception as exc:
+                QMessageBox.critical(self, "Cannot write start location", str(exc))
+                return
         self.log_box.clear()
-        self.log(f"[APP] Wrote start location: {line}")
+        if docker_mode:
+            self.log(f"[APP] Passing Docker start location: {line}")
+        else:
+            self.log(f"[APP] Wrote start location: {line}")
         self.set_sitl_status("starting")
-        cmd, cwd = build_sitl_command(
-            self.profile,
-            self.console_enabled.isChecked(),
-            self.mavproxy_map_enabled.isChecked(),
-            self.gcs_out.text(),
-            self.wipe_params_enabled.isChecked(),
-        )
+        if docker_mode:
+            cmd, cwd = build_docker_sitl_command(
+                self.profile,
+                self.console_enabled.isChecked(),
+                self.mavproxy_map_enabled.isChecked(),
+                self.gcs_out.text(),
+                self.wipe_params_enabled.isChecked(),
+            )
+        else:
+            cmd, cwd = build_sitl_command(
+                self.profile,
+                self.console_enabled.isChecked(),
+                self.mavproxy_map_enabled.isChecked(),
+                self.gcs_out.text(),
+                self.wipe_params_enabled.isChecked(),
+            )
         if not self.sitl_runner.start(cmd, cwd):
             self.set_sitl_status("crashed")
             return
@@ -563,7 +596,10 @@ class MainWindow(QMainWindow):
 
     def start_efi(self) -> None:
         self.update_profile_from_ui()
-        result = validate_setup(self.profile, True)
+        if self.docker_sitl_enabled.isChecked():
+            result = validate_docker_setup(self.profile, True)
+        else:
+            result = validate_setup(self.profile, True)
         if not result.ok:
             self.log("[VALIDATION]\n" + result.summary())
             QMessageBox.warning(self, "Cannot start EFI", result.summary())
@@ -584,7 +620,10 @@ class MainWindow(QMainWindow):
 
     def start_rangefinder(self) -> None:
         self.update_profile_from_ui()
-        result = validate_setup(self.profile, self.efi_enabled.isChecked())
+        if self.docker_sitl_enabled.isChecked():
+            result = validate_docker_setup(self.profile, self.efi_enabled.isChecked())
+        else:
+            result = validate_setup(self.profile, self.efi_enabled.isChecked())
         if not result.ok:
             self.log("[VALIDATION]\n" + result.summary())
             QMessageBox.warning(self, "Cannot start rangefinder", result.summary())
@@ -638,6 +677,10 @@ class MainWindow(QMainWindow):
         try:
             subprocess.run(
                 ["bash", "-lc", "pkill -f arduplane || true; pkill -f sim_vehicle.py || true"],
+                check=False,
+            )
+            subprocess.run(
+                ["bash", "-lc", "docker rm -f omnitrainer-sitl >/dev/null 2>&1 || true"],
                 check=False,
             )
         except Exception:

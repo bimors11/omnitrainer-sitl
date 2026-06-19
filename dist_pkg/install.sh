@@ -49,9 +49,11 @@ if [ "$OS" = "ubuntu" ]; then
         libgl1-mesa-glx \
         libgl1-mesa-dri \
         libegl1-mesa \
+        docker.io \
         xterm \
         git \
         2>&1 | grep -E "^(Get|Setting|Processing|Reading)" || true
+    sudo apt-get install -y docker-compose-plugin 2>&1 | grep -E "^(Get|Setting|Processing|Reading)" || true
     echo "[OK] System packages installed"
     echo ""
 elif [ "$OS" = "macos" ]; then
@@ -98,4 +100,10 @@ echo "This installer assumes ArduPilot SITL is already installed on the device."
 echo "If you need to use a custom ArduPilot checkout, set:"
 echo "  OMNI_ARDUPILOT_ROOT=/path/to/ardupilot ./omni-trainer-sitl"
 echo "Default auto-detected ArduPilot path: $HOME/ardupilot"
+if command -v docker >/dev/null 2>&1; then
+    echo "Docker SITL is available from the GUI checkbox or:"
+    echo "  bash scripts/docker_sitl.sh"
+    echo "If Docker permission is denied, run: sudo usermod -aG docker \$USER"
+    echo "Then log out and log back in."
+fi
 echo ""

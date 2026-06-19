@@ -84,3 +84,34 @@ def validate_setup(profile: LauncherProfile, efi_enabled: bool = True) -> Valida
         result.add(f"Python module {module_name}", _module_available(module_name), "installed" if _module_available(module_name) else "missing")
     result.add("QtWebEngine", _module_available("PyQt5.QtWebEngineWidgets"), "PyQt5 QtWebEngine available" if _module_available("PyQt5.QtWebEngineWidgets") else "Install python3-pyqt5.qtwebengine.", "error")
     return result
+
+
+def validate_docker_setup(profile: LauncherProfile, efi_enabled: bool = True) -> ValidationResult:
+    result = ValidationResult()
+    docker = shutil.which("docker")
+    dockerfile = profile.paths.project_root / "docker" / "Dockerfile"
+    entrypoint = profile.paths.project_root / "docker" / "entrypoint.sh"
+    compose = profile.paths.project_root / "docker-compose.yml"
+    model_source = profile.paths.project_root / "assets" / "ardupilot" / "aircraft" / profile.aircraft.frame.split(":", 1)[-1]
+    efi_script = profile.paths.resolve_project_path(profile.paths.efi_script)
+    rangefinder_script = profile.paths.resolve_project_path(profile.paths.rangefinder_script)
+    param_file = profile.paths.resolve_project_path(profile.paths.param_file)
+
+    result.add("Docker CLI", docker is not None, docker or "Install Docker Engine and make sure 'docker' is on PATH.")
+    result.add("Dockerfile", dockerfile.exists(), str(dockerfile))
+    result.add("Docker entrypoint", entrypoint.exists(), str(entrypoint))
+    result.add("docker-compose.yml", compose.exists(), str(compose), "warning")
+    result.add("Bundled aircraft assets", model_source.exists(), str(model_source))
+    result.add("SITL param file", param_file.exists(), str(param_file))
+    if efi_enabled:
+        result.add("EFI script", efi_script.exists(), str(efi_script))
+    else:
+        result.add("EFI script", True, "EFI disabled for this run.", "warning")
+    if profile.rangefinder.enabled:
+        result.add("Rangefinder script", rangefinder_script.exists(), str(rangefinder_script))
+    else:
+        result.add("Rangefinder script", True, "Rangefinder disabled for this run.", "warning")
+    for module_name in ("yaml", "pymavlink", "PyQt5"):
+        result.add(f"Python module {module_name}", _module_available(module_name), "installed" if _module_available(module_name) else "missing")
+    result.add("QtWebEngine", _module_available("PyQt5.QtWebEngineWidgets"), "PyQt5 QtWebEngine available" if _module_available("PyQt5.QtWebEngineWidgets") else "Install python3-pyqt5.qtwebengine.", "error")
+    return result

@@ -8,6 +8,10 @@ from PyQt5.QtCore import QObject, QProcess, pyqtSignal
 from .config import LauncherProfile
 
 
+DOCKER_IMAGE = "omnitrainer-sitl:local"
+DOCKER_CONTAINER = "omnitrainer-sitl"
+
+
 class ProcessRunner(QObject):
     output = pyqtSignal(str)
     started = pyqtSignal(str)
@@ -97,3 +101,68 @@ def build_sitl_command(
 
     shell_cmd = " ".join(shlex.quote(arg) for arg in args)
     return ["bash", "-lc", shell_cmd], profile.paths.ardupilot_root
+
+
+def build_docker_sitl_command(
+    profile: LauncherProfile,
+    console: bool,
+    mavproxy_map: bool,
+    gcs_out: str,
+    wipe_params: bool = False,
+) -> tuple[list[str], Path]:
+    project_root = profile.paths.project_root
+    dockerfile = project_root / "docker" / "Dockerfile"
+    param_file = profile.paths.resolve_project_path(profile.paths.param_file)
+    sim_args = [
+        "./Tools/autotest/sim_vehicle.py",
+        "-v",
+        profile.aircraft.vehicle,
+        "-f",
+        profile.aircraft.frame,
+        "-L",
+        profile.start_location.name,
+    ]
+    if console:
+        sim_args.append("--console")
+    if mavproxy_map:
+        sim_args.append("--map")
+    if gcs_out.strip():
+        sim_args.append(f"--out={gcs_out.strip()}")
+    if wipe_params:
+        sim_args.append("-w")
+    if param_file.exists():
+        sim_args.append(f"--add-param-file=/workspace/omnitrainer-sitl/{param_file.relative_to(project_root)}")
+
+    inspect_cmd = " ".join(shlex.quote(arg) for arg in ["docker", "image", "inspect", DOCKER_IMAGE])
+    build_cmd = " ".join(
+        shlex.quote(arg)
+        for arg in ["docker", "build", "-t", DOCKER_IMAGE, "-f", str(dockerfile), str(project_root)]
+    )
+    run_cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        DOCKER_CONTAINER,
+        "--network",
+        "host",
+        "-e",
+        "OMNI_WORKSPACE=/workspace/omnitrainer-sitl",
+        "-e",
+        f"OMNI_LOCATION_NAME={profile.start_location.name}",
+        "-e",
+        f"OMNI_LOCATION_LAT={profile.start_location.lat:.7f}",
+        "-e",
+        f"OMNI_LOCATION_LNG={profile.start_location.lng:.7f}",
+        "-e",
+        f"OMNI_LOCATION_ALT_MSL={profile.start_location.alt_msl_m:.2f}",
+        "-e",
+        f"OMNI_LOCATION_HEADING={profile.start_location.heading_deg:.1f}",
+        "-v",
+        f"{project_root}:/workspace/omnitrainer-sitl:ro",
+        DOCKER_IMAGE,
+        *sim_args,
+    ]
+    cleanup_cmd = "docker rm -f omnitrainer-sitl >/dev/null 2>&1 || true"
+    shell_cmd = f"({inspect_cmd} >/dev/null 2>&1 || {build_cmd}) && ({cleanup_cmd}) && " + " ".join(shlex.quote(arg) for arg in run_cmd)
+    return ["bash", "-lc", shell_cmd], project_root

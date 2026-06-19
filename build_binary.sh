@@ -40,6 +40,9 @@ pyinstaller \
   --add-data "$PROJECT_ROOT/profiles:profiles" \
   --add-data "$PROJECT_ROOT/scripts:scripts" \
   --add-data "$PROJECT_ROOT/assets:assets" \
+  --add-data "$PROJECT_ROOT/docker:docker" \
+  --add-data "$PROJECT_ROOT/docker-compose.yml:." \
+  --add-data "$PROJECT_ROOT/.dockerignore:." \
   --add-data "$PROJECT_ROOT/omnisitl.param:." \
   --add-data "$PROJECT_ROOT/README.md:." \
   --add-data "$PROJECT_ROOT/requirements.txt:." \

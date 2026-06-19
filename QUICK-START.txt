@@ -15,7 +15,7 @@ STEP 2: Run the automatic installer (RECOMMENDED)
   ./install.sh
   
   This will:
-  - Install system dependencies (PyQt5, MAVProxy, pymavlink)
+  - Install system dependencies (PyQt5, MAVProxy, pymavlink, Docker)
   - Ask if you want to install ArduPilot SITL
   - Download and configure everything needed
 
@@ -23,6 +23,11 @@ STEP 3: Launch the application
   ./omni-trainer-sitl
 
   That's it! The GUI will appear.
+
+  Docker SITL:
+  - Enable "Docker SITL" before clicking "Start SITL" or "Start All"
+  - First run builds the local image and can take several minutes
+  - QGroundControl still runs on the host and listens on UDP 14550
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -86,6 +91,12 @@ ADVANCED OPTIONS:
 
   Use custom configuration profile:
     ./omni-trainer-sitl omni_trainer_dle30_15kg.yaml
+
+  Run Docker SITL without the GUI:
+    bash scripts/docker_sitl.sh
+
+  Run with Docker Compose:
+    docker compose up --build sitl
 
 ═══════════════════════════════════════════════════════════════════════════════
 

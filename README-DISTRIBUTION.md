@@ -89,6 +89,23 @@ OMNI_ARDUPILOT_ROOT=/path/to/ardupilot ./omni-trainer-sitl
 OMNI_ARDUPILOT_ROOT=/path/to/ardupilot ./omni-trainer-sitl
 ```
 
+### With Docker SITL
+Install Docker through `./install.sh`, then enable **Docker SITL** in the launcher before pressing **Start SITL** or **Start All**. The first Docker run builds `omnitrainer-sitl:local`; later runs reuse it.
+
+Headless Docker SITL:
+
+```bash
+bash scripts/docker_sitl.sh
+```
+
+Compose:
+
+```bash
+docker compose up --build sitl
+```
+
+Docker mode uses host networking so QGroundControl can receive telemetry on UDP `14550`.
+
 ## First Time Setup
 
 1. Run `./install.sh` to install all dependencies

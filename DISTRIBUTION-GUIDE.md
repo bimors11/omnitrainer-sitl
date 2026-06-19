@@ -19,6 +19,9 @@ dist_pkg/
 ├── omnisitl.param              # Default SITL parameters
 ├── profiles/                   # Bundled profiles
 ├── scripts/                    # Helper launch/setup/telemetry scripts
+├── docker/                     # Docker SITL image files
+├── docker-compose.yml          # Headless Docker SITL compose file
+├── .dockerignore               # Docker build context exclusions
 └── assets/                     # Bundled Omni-Trainer assets
 ```
 
@@ -120,6 +123,7 @@ cp -r dist_pkg /media/usb/omni-trainer-sitl/
 ✅ **Works without ArduPilot installed**
 - Basic launcher functions available
 - Optional: install ArduPilot for full SITL simulation
+- Optional: enable Docker SITL to run ArduPilot inside a local container
 
 ## Verification
 
@@ -191,7 +195,7 @@ bash build_binary.sh
 mkdir dist_pkg_new
 cp dist/omni-trainer-sitl dist_pkg_new/
 cp install.sh README-DISTRIBUTION.md QUICK-START.txt omnisitl.param dist_pkg_new/
-cp -a profiles scripts assets dist_pkg_new/
+cp -a profiles scripts assets docker docker-compose.yml .dockerignore dist_pkg_new/
 tar czf omni-trainer-sitl-standalone.tar.gz dist_pkg_new/
 ```
 
