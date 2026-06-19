@@ -11,10 +11,10 @@ from .config import LauncherProfile
 DOCKER_IMAGE = "omnitrainer-sitl:local"
 DOCKER_CONTAINER = "omnitrainer-sitl"
 
-# QGC on host connects/listens to localhost:14550.
-# Docker maps host UDP 14550 to container UDP 14550.
-# MAVProxy inside container opens UDP 14550.
-DOCKER_GCS_OUT = "udpin:0.0.0.0:14550"
+# QGC berjalan di host dan listen UDP 14551.
+# Container mengirim MAVLink keluar ke gateway docker0 host.
+# Jangan publish/bind UDP port 14551 di docker run, karena port itu dipakai QGC.
+DOCKER_GCS_OUT = "udpout:172.17.0.1:14551"
 
 
 class ProcessRunner(QObject):
@@ -187,11 +187,7 @@ def build_docker_sitl_command(
         "--name",
         DOCKER_CONTAINER,
 
-        # Expose MAVLink UDP from container to host.
-        "-p",
-        "14550:14550/udp",
-
-        # Optional MAVProxy/SITL TCP access from host.
+        # TCP ports only. Do not publish UDP 14551 because QGC uses it on the host.
         "-p",
         "5760:5760/tcp",
         "-p",
