@@ -10,7 +10,7 @@ from .config import LauncherProfile
 
 DOCKER_IMAGE = "omnitrainer-sitl:local"
 DOCKER_CONTAINER = "omnitrainer-sitl"
-DOCKER_GCS_OUT = "udpout:172.17.0.1:14550"
+DOCKER_GCS_OUT = "udpout:127.0.0.1:14550"
 
 
 class ProcessRunner(QObject):
@@ -148,9 +148,6 @@ def build_docker_sitl_command(
     if mavproxy_map:
         sim_args.append("--map")
 
-    # Docker bridge mode.
-    # 172.17.0.1 is the default docker0 gateway address on the Linux host.
-    # QGroundControl must listen on UDP port 14550 on the host.
     sim_args.append(f"--out={DOCKER_GCS_OUT}")
 
     if wipe_params:
@@ -185,6 +182,8 @@ def build_docker_sitl_command(
         "--rm",
         "--name",
         DOCKER_CONTAINER,
+        "--network",
+        "host",
         "-e",
         "OMNI_WORKSPACE=/workspace/omnitrainer-sitl",
         "-e",
