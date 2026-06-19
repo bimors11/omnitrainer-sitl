@@ -12,7 +12,22 @@ RUN ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime \
         tzdata \
         ca-certificates \
         git \
+        wget \
         lsb-release \
+        build-essential \
+        g++ \
+        gcc \
+        make \
+        gawk \
+        ccache \
+        pkg-config \
+        libtool \
+        libtool-bin \
+        libxml2-dev \
+        libxslt1-dev \
+        libffi-dev \
+        libssl-dev \
+        python-is-python3 \
         python3 \
         python3-dev \
         python3-pip \
@@ -20,26 +35,47 @@ RUN ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime \
         python3-wheel \
         python3-venv \
         python3-pexpect \
+        python3-numpy \
+        python3-pyparsing \
+        python3-psutil \
+        python3-lxml \
+        python3-yaml \
         rsync \
-        sudo \
         xterm \
+        ppp \
     && dpkg-reconfigure -f noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone --recurse-submodules https://github.com/ArduPilot/ardupilot.git "${ARDUPILOT_ROOT}"
+RUN git clone --depth 1 --recurse-submodules --shallow-submodules \
+    https://github.com/ArduPilot/ardupilot.git "${ARDUPILOT_ROOT}"
 
-RUN useradd -m -s /bin/bash ardupilot \
-    && chown -R ardupilot:ardupilot "${ARDUPILOT_ROOT}" \
-    && echo "ardupilot ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ardupilot \
-    && echo 'Defaults env_keep += "DEBIAN_FRONTEND TZ"' > /etc/sudoers.d/keep_env \
-    && chmod 0440 /etc/sudoers.d/ardupilot /etc/sudoers.d/keep_env \
-    && su - ardupilot -c "cd ${ARDUPILOT_ROOT} && export DEBIAN_FRONTEND=noninteractive && export TZ=Etc/UTC && ./Tools/environment_install/install-prereqs-ubuntu.sh -y"
+RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel packaging \
+    && python3 -m pip install --no-cache-dir \
+        empy==3.3.4 \
+        future \
+        lxml \
+        pymavlink \
+        pyserial \
+        MAVProxy \
+        geocoder \
+        ptyprocess \
+        dronecan \
+        flake8 \
+        junitparser \
+        wsproto \
+        tabulate \
+        pyyaml \
+        numpy \
+        pyparsing \
+        psutil
 
-RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && python3 -m pip install --no-cache-dir PyYAML pymavlink MAVProxy
+RUN cd "${ARDUPILOT_ROOT}" \
+    && ./waf configure --board sitl \
+    && ./waf plane
 
 COPY docker/entrypoint.sh /usr/local/bin/omni-docker-entrypoint
 RUN chmod +x /usr/local/bin/omni-docker-entrypoint
 
 WORKDIR /opt/ardupilot
+ENTRYPOINT ["/usr/local/bin/omni-docker-entrypoint"]
 ENTRYPOINT ["/usr/local/bin/omni-docker-entrypoint"]
