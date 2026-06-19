@@ -14,7 +14,7 @@ def docker_host_gcs_out(gcs_out: str) -> str:
     if not value:
         return value
     if value in {"udp:127.0.0.1:14550", "udpout:127.0.0.1:14550"}:
-        return "udp:host.docker.internal:14550"
+        return "udpout:host.docker.internal:14550"
     if value.startswith("udp:localhost:") or value.startswith("udpout:localhost:"):
         return value.replace("localhost", "host.docker.internal", 1).replace("udpout:", "udp:", 1)
     if value.startswith("udp:127.0.0.1:") or value.startswith("udpout:127.0.0.1:"):
