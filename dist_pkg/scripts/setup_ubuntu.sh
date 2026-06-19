@@ -27,12 +27,20 @@ fi
   python3-pyqt5.qtwebengine \
   python3-pyqt5.qtwebchannel \
   docker.io \
+  docker-compose-v2 \
   rsync \
   xterm
 
-"${APT[@]}" install -y docker-compose-plugin || true
+pip_install_user() {
+  if python3 -m pip install --user "$@"; then
+    return 0
+  fi
+  echo
+  echo "pip install failed. Retrying with --break-system-packages for externally managed Python environments."
+  python3 -m pip install --user --break-system-packages "$@"
+}
 
-python3 -m pip install --user -r "${PROJECT_ROOT}/requirements.txt"
+pip_install_user -r "${PROJECT_ROOT}/requirements.txt"
 
 mkdir -p "$(dirname "${ARDUPILOT_ROOT}")"
 

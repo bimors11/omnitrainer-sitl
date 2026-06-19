@@ -157,6 +157,8 @@ This is normal - `sudo` is needed for system packages. Enter your password.
 ### "QtWebEngine not found" after installation
 ```bash
 pip install --user PyQt5-sip PyQt5 PyQtWebEngine
+# If Python reports an externally managed environment:
+pip install --user --break-system-packages PyQt5-sip PyQt5 PyQtWebEngine
 ```
 
 ### Binary is too large

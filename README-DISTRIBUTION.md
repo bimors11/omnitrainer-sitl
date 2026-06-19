@@ -33,6 +33,8 @@ chmod +x install.sh omni-trainer-sitl
 2. **Install Python dependencies:**
    ```bash
    pip install --user PyYAML pymavlink MAVProxy
+   # If Python reports an externally managed environment:
+   pip install --user --break-system-packages PyYAML pymavlink MAVProxy
    ```
 
 3. **Install ArduPilot (optional but recommended):**
@@ -58,7 +60,7 @@ chmod +x install.sh omni-trainer-sitl
 ### Runtime Dependencies
 The binary includes most dependencies, but your system must have:
 - PyQt5 graphics libraries (`python3-pyqt5`, `python3-pyqt5.qtwebengine`)
-- MAVProxy and pymavlink (`pip install --user PyYAML pymavlink MAVProxy`)
+- MAVProxy and pymavlink (`pip install --user PyYAML pymavlink MAVProxy`, or add `--break-system-packages` on externally managed Python installs)
 - xterm (for SITL console)
 
 ### Optional: ArduPilot SITL
@@ -127,6 +129,8 @@ chmod +x omni-trainer-sitl
 Install PyQt5 WebEngine:
 ```bash
 pip install --user PyQt5-sip PyQt5 PyQtWebEngine
+# If Python reports an externally managed environment:
+pip install --user --break-system-packages PyQt5-sip PyQt5 PyQtWebEngine
 # Or on Ubuntu:
 sudo apt-get install python3-pyqt5.qtwebengine
 ```
@@ -134,6 +138,8 @@ sudo apt-get install python3-pyqt5.qtwebengine
 ### "MAVProxy not found" error
 ```bash
 pip install --user MAVProxy pymavlink
+# If Python reports an externally managed environment:
+pip install --user --break-system-packages MAVProxy pymavlink
 ```
 
 ### SITL won't start: "sim_vehicle.py not found"

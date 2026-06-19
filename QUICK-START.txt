@@ -71,6 +71,8 @@ TROUBLESHOOTING:
 
   Binary won't start / "QtWebEngine not found"
     → Run: pip install --user PyQt5-sip PyQt5 PyQtWebEngine
+    → If Python says externally managed environment:
+      pip install --user --break-system-packages PyQt5-sip PyQt5 PyQtWebEngine
 
   SITL console won't appear
     → Check if xterm is installed: sudo apt-get install xterm

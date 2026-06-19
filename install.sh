@@ -50,10 +50,9 @@ if [ "$OS" = "ubuntu" ]; then
         libgl1-mesa-dri \
         libegl1-mesa \
         docker.io \
+        docker-compose-v2 \
         xterm \
-        git \
-        2>&1 | grep -E "^(Get|Setting|Processing|Reading)" || true
-    sudo apt-get install -y docker-compose-plugin 2>&1 | grep -E "^(Get|Setting|Processing|Reading)" || true
+        git
     echo "[OK] System packages installed"
     echo ""
 elif [ "$OS" = "macos" ]; then
@@ -69,12 +68,14 @@ fi
 
 # Install Python packages
 echo "[INFO] Installing Python packages..."
-python3 -m pip install --user --upgrade pip setuptools wheel 2>&1 | tail -3 || true
-python3 -m pip install --user \
-    PyYAML \
-    pymavlink \
-    MAVProxy \
-    2>&1 | grep -E "Successfully|already satisfied" || true
+pip_install_user() {
+    if python3 -m pip install --user "$@"; then
+        return 0
+    fi
+    echo "[WARN] pip install failed. Retrying with --break-system-packages for externally managed Python environments."
+    python3 -m pip install --user --break-system-packages "$@"
+}
+pip_install_user PyYAML pymavlink MAVProxy
 echo "[OK] Python packages installed"
 echo ""
 
