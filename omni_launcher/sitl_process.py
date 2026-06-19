@@ -3,24 +3,6 @@ from __future__ import annotations
 import shlex
 from pathlib import Path
 
-
-def docker_host_gcs_out(gcs_out: str) -> str:
-    """Return the GCS UDP endpoint that is reachable from inside Docker.
-
-    In Docker, 127.0.0.1 points to the container itself, not to the host
-    where QGroundControl is listening. Use Docker's host gateway name instead.
-    """
-    value = gcs_out.strip()
-    if not value:
-        return value
-    if value in {"udp:127.0.0.1:14550", "udpout:127.0.0.1:14550"}:
-        return "udpout:host.docker.internal:14550"
-    if value.startswith("udp:localhost:") or value.startswith("udpout:localhost:"):
-        return value.replace("localhost", "host.docker.internal", 1).replace("udpout:", "udp:", 1)
-    if value.startswith("udp:127.0.0.1:") or value.startswith("udpout:127.0.0.1:"):
-        return value.replace("127.0.0.1", "host.docker.internal", 1).replace("udpout:", "udp:", 1)
-    return value
-
 from PyQt5.QtCore import QObject, QProcess, pyqtSignal
 
 from .config import LauncherProfile
@@ -28,6 +10,7 @@ from .config import LauncherProfile
 
 DOCKER_IMAGE = "omnitrainer-sitl:local"
 DOCKER_CONTAINER = "omnitrainer-sitl"
+DOCKER_GCS_OUT = "udpout:172.17.0.1:14550"
 
 
 class ProcessRunner(QObject):
@@ -48,14 +31,18 @@ class ProcessRunner(QObject):
         if self.is_running():
             self.output.emit(f"[{self.name}] already running.")
             return False
+
         self.proc = QProcess(self)
         self.proc.setProcessChannelMode(QProcess.MergedChannels)
+
         if cwd:
             self.proc.setWorkingDirectory(str(cwd))
+
         self.proc.readyReadStandardOutput.connect(self._read_output)
         self.proc.started.connect(lambda: self.started.emit(self.name))
         self.proc.finished.connect(self._finished)
         self.proc.errorOccurred.connect(self._error)
+
         self.output.emit(f"[{self.name}] $ {' '.join(cmd)}")
         self.proc.start(cmd[0], cmd[1:])
         return True
@@ -63,19 +50,24 @@ class ProcessRunner(QObject):
     def stop(self) -> None:
         if self.proc is None:
             return
+
         if self.proc.state() != QProcess.NotRunning:
             self.output.emit(f"[{self.name}] stopping...")
             self.proc.terminate()
+
             if not self.proc.waitForFinished(3000):
                 self.output.emit(f"[{self.name}] terminate timed out; killing process.")
                 self.proc.kill()
                 self.proc.waitForFinished(3000)
+
         self.proc = None
 
     def _read_output(self) -> None:
         if not self.proc:
             return
+
         text = bytes(self.proc.readAllStandardOutput()).decode("utf-8", errors="replace")
+
         for line in text.rstrip().splitlines():
             self.output.emit(f"[{self.name}] {line}")
 
@@ -85,6 +77,7 @@ class ProcessRunner(QObject):
 
     def _error(self, error: QProcess.ProcessError) -> None:
         self.output.emit(f"[{self.name}] ERROR: process error {int(error)}")
+
         if error == QProcess.FailedToStart:
             self.failed_to_start.emit(self.name)
 
@@ -105,19 +98,26 @@ def build_sitl_command(
         "-L",
         profile.start_location.name,
     ]
+
     if console:
         args.append("--console")
+
     if mavproxy_map:
         args.append("--map")
+
     if gcs_out.strip():
         args.append(f"--out={gcs_out.strip()}")
+
     if wipe_params:
         args.append("-w")
+
     param_file = profile.paths.resolve_project_path(profile.paths.param_file)
+
     if param_file.exists():
         args.append(f"--add-param-file={param_file}")
 
     shell_cmd = " ".join(shlex.quote(arg) for arg in args)
+
     return ["bash", "-lc", shell_cmd], profile.paths.ardupilot_root
 
 
@@ -131,6 +131,7 @@ def build_docker_sitl_command(
     project_root = profile.paths.project_root
     dockerfile = project_root / "docker" / "Dockerfile"
     param_file = profile.paths.resolve_project_path(profile.paths.param_file)
+
     sim_args = [
         "./Tools/autotest/sim_vehicle.py",
         "-v",
@@ -140,33 +141,50 @@ def build_docker_sitl_command(
         "-L",
         profile.start_location.name,
     ]
+
     if console:
         sim_args.append("--console")
+
     if mavproxy_map:
         sim_args.append("--map")
-    docker_gcs_out = docker_host_gcs_out(gcs_out)
-    if docker_gcs_out:
-        sim_args.append(f"--out={docker_gcs_out}")
+
+    # Docker bridge mode.
+    # 172.17.0.1 is the default docker0 gateway address on the Linux host.
+    # QGroundControl must listen on UDP port 14550 on the host.
+    sim_args.append(f"--out={DOCKER_GCS_OUT}")
+
     if wipe_params:
         sim_args.append("-w")
-    if param_file.exists():
-        sim_args.append(f"--add-param-file=/workspace/omnitrainer-sitl/{param_file.relative_to(project_root)}")
 
-    inspect_cmd = " ".join(shlex.quote(arg) for arg in ["docker", "image", "inspect", DOCKER_IMAGE])
+    if param_file.exists():
+        sim_args.append(
+            f"--add-param-file=/workspace/omnitrainer-sitl/{param_file.relative_to(project_root)}"
+        )
+
+    inspect_cmd = " ".join(
+        shlex.quote(arg)
+        for arg in ["docker", "image", "inspect", DOCKER_IMAGE]
+    )
+
     build_cmd = " ".join(
         shlex.quote(arg)
-        for arg in ["docker", "build", "-t", DOCKER_IMAGE, "-f", str(dockerfile), str(project_root)]
+        for arg in [
+            "docker",
+            "build",
+            "-t",
+            DOCKER_IMAGE,
+            "-f",
+            str(dockerfile),
+            str(project_root),
+        ]
     )
+
     run_cmd = [
         "docker",
         "run",
         "--rm",
         "--name",
         DOCKER_CONTAINER,
-        "--add-host",
-        "host.docker.internal:host-gateway",
-        "--network",
-        "host",
         "-e",
         "OMNI_WORKSPACE=/workspace/omnitrainer-sitl",
         "-e",
@@ -184,6 +202,13 @@ def build_docker_sitl_command(
         DOCKER_IMAGE,
         *sim_args,
     ]
-    cleanup_cmd = "docker rm -f omnitrainer-sitl >/dev/null 2>&1 || true"
-    shell_cmd = f"({inspect_cmd} >/dev/null 2>&1 || {build_cmd}) && ({cleanup_cmd}) && " + " ".join(shlex.quote(arg) for arg in run_cmd)
+
+    cleanup_cmd = f"docker rm -f {DOCKER_CONTAINER} >/dev/null 2>&1 || true"
+
+    shell_cmd = (
+        f"({inspect_cmd} >/dev/null 2>&1 || {build_cmd}) "
+        f"&& ({cleanup_cmd}) && "
+        + " ".join(shlex.quote(arg) for arg in run_cmd)
+    )
+
     return ["bash", "-lc", shell_cmd], project_root
