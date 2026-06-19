@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-setuptools \
     python3-wheel \
     python3-venv \
+    python3-pexpect \
     rsync \
     sudo \
     xterm \
