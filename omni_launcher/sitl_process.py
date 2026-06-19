@@ -10,7 +10,11 @@ from .config import LauncherProfile
 
 DOCKER_IMAGE = "omnitrainer-sitl:local"
 DOCKER_CONTAINER = "omnitrainer-sitl"
-DOCKER_GCS_OUT = "udpout:127.0.0.1:14550"
+
+# QGC on host connects/listens to localhost:14550.
+# Docker maps host UDP 14550 to container UDP 14550.
+# MAVProxy inside container opens UDP 14550.
+DOCKER_GCS_OUT = "udpin:0.0.0.0:14550"
 
 
 class ProcessRunner(QObject):
@@ -182,8 +186,17 @@ def build_docker_sitl_command(
         "--rm",
         "--name",
         DOCKER_CONTAINER,
-        "--network",
-        "host",
+
+        # Expose MAVLink UDP from container to host.
+        "-p",
+        "14550:14550/udp",
+
+        # Optional MAVProxy/SITL TCP access from host.
+        "-p",
+        "5760:5760/tcp",
+        "-p",
+        "5762:5762/tcp",
+
         "-e",
         "OMNI_WORKSPACE=/workspace/omnitrainer-sitl",
         "-e",
