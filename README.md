@@ -84,7 +84,7 @@ bash scripts/setup_ubuntu.sh
 ./launch.sh
 ```
 
-In the GUI, enable **Docker SITL** before pressing **Start SITL** or **Start All**. The first run builds the local image `omnitrainer-sitl:local`, so it can take several minutes. Later runs reuse the image.
+In the GUI, enable **Docker SITL** before pressing **Start**. The first run builds the local image `omnitrainer-sitl:local`, so it can take several minutes. Later runs reuse the image.
 
 Headless Docker SITL is also available:
 
@@ -127,7 +127,7 @@ Use **Validate Setup** before launch. The validation checks:
 - `locations.txt`
 - QtWebEngine availability
 
-Use **Start All** to write the selected start location into ArduPilot `locations.txt`, start ArduPlane SITL, wait for the telemetry TCP port, then start the EFI injector and rangefinder injector when enabled. Use **Start SITL**, **Start EFI**, or **Start RNG** for manual staged operation. **Stop All** kills all launched processes.
+Use **Start** to write the selected start location into ArduPilot `locations.txt`, start ArduPlane SITL, wait for the telemetry TCP port, then start the EFI injector and rangefinder injector when enabled. **Stop** kills all launched processes.
 
 The SITL option **Reset params** is enabled by default. Keep it enabled when changing bundled model/takeoff params, because ArduPilot SITL stores parameters between runs.
 

@@ -25,7 +25,7 @@ STEP 3: Launch the application
   That's it! The GUI will appear.
 
   Docker SITL:
-  - Enable "Docker SITL" before clicking "Start SITL" or "Start All"
+  - Enable "Docker SITL" before clicking "Start"
   - First run builds the local image and can take several minutes
   - QGroundControl still runs on the host and listens on UDP 14550
 
@@ -38,7 +38,7 @@ WHAT YOU CAN DO:
      Use "Fetch Terrain Altitude" to get elevation automatically
 
   2. START SIMULATION
-     Click "Start All" button
+     Click "Start" button
      Watch the console for SITL startup messages
 
   3. INTERACT WITH AIRCRAFT
