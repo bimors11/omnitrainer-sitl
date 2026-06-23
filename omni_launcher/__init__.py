@@ -1,3 +1,3 @@
-"""Omni Trainer SITL Launcher package."""
+"""OMNI-SITL launcher package."""
 
-APP_NAME = "Omni Trainer SITL Launcher"
+APP_NAME = "OMNI-SITL"

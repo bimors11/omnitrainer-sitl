@@ -5,11 +5,13 @@ from pathlib import Path
 from typing import Any
 
 from PyQt5.QtCore import QObject, QThread, QTimer, Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
     QCheckBox,
     QDoubleSpinBox,
     QFileDialog,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -38,6 +40,7 @@ from ..sitl_process import ProcessRunner, build_docker_sitl_command, build_sitl_
 from ..terrain import fetch_terrain_altitude_m
 from ..validation import validate_docker_setup, validate_setup
 from .map_widget import MapWidget
+from .styles import apply_styles
 
 
 class AviationWorker(QObject):
@@ -131,21 +134,31 @@ class MainWindow(QMainWindow):
 
     def _build_ui(self) -> None:
         root = QWidget()
+        root.setObjectName("mainSurface")
         outer = QVBoxLayout(root)
-        outer.setContentsMargins(8, 8, 8, 8)
+        outer.setContentsMargins(18, 18, 18, 12)
+        outer.setSpacing(12)
+
+        outer.addWidget(self._build_header())
 
         self.map_widget = MapWidget(self.profile, self.aviation_data)
         self.map_widget.setMinimumSize(420, 300)
         self.map_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.map_widget.location_changed.connect(self.on_map_location)
 
+        map_card = QFrame()
+        map_card.setObjectName("mapCard")
+        map_layout = QVBoxLayout(map_card)
+        map_layout.setContentsMargins(1, 1, 1, 1)
+        map_layout.addWidget(self.map_widget)
+
         side_panel = self._build_side_panel()
         top_splitter = QSplitter(Qt.Horizontal)
-        top_splitter.addWidget(self.map_widget)
+        top_splitter.addWidget(map_card)
         top_splitter.addWidget(side_panel)
-        top_splitter.setStretchFactor(0, 4)
-        top_splitter.setStretchFactor(1, 1)
-        top_splitter.setSizes([820, 380])
+        top_splitter.setStretchFactor(0, 3)
+        top_splitter.setStretchFactor(1, 2)
+        top_splitter.setSizes([760, 460])
 
         self.log_box = QPlainTextEdit()
         self.log_box.setReadOnly(True)
@@ -164,25 +177,50 @@ class MainWindow(QMainWindow):
         outer.addWidget(main_splitter)
         self.setCentralWidget(root)
 
+    def _build_header(self) -> QFrame:
+        header = QFrame()
+        header.setObjectName("brandBar")
+        layout = QHBoxLayout(header)
+        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setSpacing(12)
+
+        logo = QLabel()
+        logo.setObjectName("brandLogo")
+        logo_path = Path(__file__).resolve().parent / "assets" / "betawhite.png"
+        pixmap = QPixmap(str(logo_path))
+        if not pixmap.isNull():
+            logo.setPixmap(pixmap.scaled(48, 34, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        logo.setFixedSize(54, 38)
+        logo.setAlignment(Qt.AlignCenter)
+
+        title = QLabel(APP_NAME)
+        title.setObjectName("appTitle")
+
+        self.start_btn = QPushButton("Start")
+        self.stop_btn = QPushButton("Stop")
+        for button in (self.start_btn, self.stop_btn):
+            button.setMinimumHeight(38)
+            button.setMinimumWidth(128)
+        self.start_btn.setObjectName("primaryAction")
+        self.stop_btn.setObjectName("dangerAction")
+        self.start_btn.clicked.connect(self.start_all_clicked)
+        self.stop_btn.clicked.connect(self.stop_all)
+
+        layout.addWidget(logo)
+        layout.addWidget(title)
+        layout.addStretch(1)
+        layout.addWidget(self.start_btn)
+        layout.addWidget(self.stop_btn)
+        return header
+
     def _build_side_panel(self) -> QWidget:
         panel = QWidget()
+        panel.setObjectName("sidePanel")
         panel.setMinimumWidth(300)
         panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(8, 0, 8, 8)
-        layout.setSpacing(8)
-
-        actions = QHBoxLayout()
-        start_btn = QPushButton("Start")
-        stop_btn = QPushButton("Stop")
-        for button in (start_btn, stop_btn):
-            button.setMinimumHeight(36)
-        start_btn.setStyleSheet("font-weight: bold;")
-        start_btn.clicked.connect(self.start_all_clicked)
-        stop_btn.clicked.connect(self.stop_all)
-        actions.addWidget(start_btn)
-        actions.addWidget(stop_btn)
-        layout.addLayout(actions)
+        layout.setContentsMargins(10, 0, 10, 10)
+        layout.setSpacing(10)
 
         profile_box = QGroupBox("Aircraft Profile")
         profile_grid = QGridLayout(profile_box)
@@ -323,6 +361,8 @@ class MainWindow(QMainWindow):
         self.sitl_status = QLabel("stopped")
         self.efi_status = QLabel("stopped")
         self.rangefinder_status = QLabel("stopped")
+        for label in (self.sitl_status, self.efi_status, self.rangefinder_status):
+            label.setObjectName("statusPill")
         status_grid.addWidget(QLabel("SITL"), 0, 0)
         status_grid.addWidget(self.sitl_status, 0, 1)
         status_grid.addWidget(QLabel("EFI"), 1, 0)
@@ -330,13 +370,17 @@ class MainWindow(QMainWindow):
         status_grid.addWidget(QLabel("Rangefinder"), 2, 0)
         status_grid.addWidget(self.rangefinder_status, 2, 1)
         layout.addWidget(status_box)
+        self.set_sitl_status("stopped")
+        self.set_efi_status("stopped")
+        self.set_rangefinder_status("stopped")
 
         layout.addStretch(1)
 
         scroll = QScrollArea()
+        scroll.setObjectName("sideScroll")
         scroll.setWidget(panel)
         scroll.setWidgetResizable(True)
-        scroll.setMinimumWidth(320)
+        scroll.setMinimumWidth(380)
         scroll.setMaximumWidth(560)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
@@ -691,13 +735,26 @@ class MainWindow(QMainWindow):
             self.set_rangefinder_status("stopped" if exit_code == 0 else "crashed")
 
     def set_sitl_status(self, status: str) -> None:
-        self.sitl_status.setText(status)
+        self._set_process_status(self.sitl_status, status)
 
     def set_efi_status(self, status: str) -> None:
-        self.efi_status.setText(status)
+        self._set_process_status(self.efi_status, status)
 
     def set_rangefinder_status(self, status: str) -> None:
-        self.rangefinder_status.setText(status)
+        self._set_process_status(self.rangefinder_status, status)
+
+    def _set_process_status(self, label: QLabel, status: str) -> None:
+        label.setText(status.upper())
+        if status in {"running", "starting", "waiting"}:
+            state = "ok"
+        elif status == "crashed":
+            state = "error"
+        else:
+            state = "idle"
+        label.setProperty("state", state)
+        label.style().unpolish(label)
+        label.style().polish(label)
+        label.update()
 
     def update_aviation_status(self, status: str) -> None:
         self.aviation_status.setText(status)
@@ -716,6 +773,7 @@ def run_app(profile_path: str | Path = DEFAULT_PROFILE) -> int:
     import sys
 
     app = QApplication(sys.argv)
+    apply_styles(app)
     window = MainWindow(profile_path)
     window.show()
     return app.exec_()
